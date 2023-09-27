@@ -3,7 +3,7 @@ def createCanvas(width,height):
     return map
 
 def pushObjectToCanvas(canvas,x,y,element):
-    if(y<len(canvas) and x<len(canvas[0])):
+    if(y<len(canvas) and x<len(canvas[0]) and x>=0 and y>=0):
         canvas[y][x]=element
 
 def drawCanvas(canvas):
