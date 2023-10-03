@@ -1,19 +1,255 @@
-def createCanvas(width,height):
-    map=[(["."]*width) for i in range(height)]
-    return map
 
-def pushObjectToCanvas(canvas,x,y,element):
-    if(y<len(canvas) and x<len(canvas[0]) and x>=0 and y>=0):
-        canvas[y][x]=element
 
-def drawCanvas(canvas):
-    for lineMap in canvas:
-        print("".join(lineMap))
 
-playerX=0
-playerY=0
-coldX=7
-coldY=5
+class Camera:
+    def __init__(self,x:float,y:float):
+        self.x:float=x
+        self.y:float=y
+
+class Scene:
+    def __init__(self,camera,width,height):
+        self.__map=[]
+        self.__camera=camera
+        self.__gameObjects=[]
+        self.__width=width
+        self.__height=height
+
+    def initMap(self):
+        self.__map=[(["."]*self.__width) for i in range(self.__height)]
+
+    def addObject(self,object):
+        self.__gameObjects.append(object)
+
+    def removeObject(self,object):
+        keyObject=None
+        for i in range(len(self.__gameObjects)):
+            if(self.__gameObjects[i]==object):
+                keyObject=i
+                break
+
+        self.__gameObjects[keyObject],self.__gameObjects[-1]=self.__gameObjects[-1],self.__gameObjects[keyObject]
+        self.__gameObjects.pop()
+
+    def __drawObject(self,x,y,element):
+        x=x-self.__camera.x
+        y=y-self.__camera.y
+        if(y<len(self.__map) and x<len(self.__map[0]) and x>=0 and y>=0):
+            self.__map[y][x]=element
+
+    def renderMap(self):
+        self.initMap()
+
+        for object in self.__gameObjects:
+            self.__drawObject(object.x,object.y,object.element)
+
+        for lineMap in self.__map:
+            print("".join(lineMap))
+
+    @property
+    def map(self):
+        return self.__map
+class ObjectGame:
+    def __init__(self,x:float,y:float,element:str):
+        self.x:float=x
+        self.y:float=y
+        self.element:str=element
+
+
+class InteractiveObject(ObjectGame):
+    def __init__(self,x,y,name,element,live,atack,protect):
+        super().__init__(x,y,element)
+        self.__name=name
+        self.__live=live
+        self.__atack=atack
+        self.__protect=protect
+
+    def printInfo(self):
+        print(f"імя {self.name}")
+        print(f"кількість життя {self.__live}")
+        print(f"захист {self.__protect}")
+        print(f"напад {self.__atack}")
+    @property
+    def name(self):
+        return self.__name
+    @property
+    def table(self):
+        return [
+            self.__live,
+            self.__atack,
+            self.__protect
+        ]
+
+    @table.setter
+    def tabel(self, indexAndAcamulate):
+        characteristics = [
+            self.__live,
+            self.__atack,
+            self.__protect
+        ]
+        characteristics[indexAndAcamulate[0]] += indexAndAcamulate[1]
+        self.__live = characteristics[0]
+        self.__atack = characteristics[1]
+        self.__protect = characteristics[2]
+
+
+class Player(InteractiveObject):
+    def __init__(self,x:float,y:float,element:str):
+        super().__init__(x,y,input("імя гравця"),element,10,10,10)
+
+
+    def move(self,controler):
+        self.__preveX=self.x
+        self.__preveY = self.y
+        if (controler == "w"):
+            self.y -= 1
+        elif (controler == "s"):
+            self.y += 1
+        elif (controler == "a"):
+            self.x -= 1
+        elif (controler == "d"):
+            self.x += 1
+        elif (controler=="i"):
+            self.printInfo()
+
+
+    @property
+    def preveCoords(self):
+        return {
+            "x":self.__preveX,
+            "y":self.__preveY
+        }
+class Cold(ObjectGame):
+    def colision(self,player):
+        if (self.x == player.x and self.y == player.y):
+            print("end game")
+            controler = input("пароль від сундука з золотом:").lower()
+            if (controler == "прл"):
+                print("Winner")
+            else:
+                print("Game Over")
+            return "e"
+        return ""
+
+class Decoration(ObjectGame):
+    def colision(self,player):
+        preveCoords=player.preveCoords
+        if(player.x==self.x and player.y==self.y):
+            player.x=preveCoords["x"]
+            player.y=preveCoords["y"]
+
+class NPC(InteractiveObject):
+    def __init__(self,x,y,name,element,live,atack,protect,riddle,model):
+        super().__init__(x,y,name,element,live,atack,protect)
+        self.__riddle=riddle
+        self.__model=model
+
+    def colision(self,player):
+        if(self.x==player.x and self.y==player.y):
+            return self.battle(player)
+        return None
+
+    def battle(self,player):
+        i=0
+        while player.tabel[0]>0 and self.tabel[0]>0 and i<len(self.__riddle):
+            for lineModel in self.__model:
+                print("".join(lineModel))
+            print("{name} життя {live}.................{nameNPC} життя {liveNPC}".format(name=player.name,live=player.tabel[0],nameNPC=self.name,liveNPC=self.tabel[0]))
+            print("загадка:\n"+self.__riddle[i][0])
+            result=input("відповідь на загадку:")
+            if(result==self.__riddle[i][1]):
+                self.tabel=[0,-(player.tabel[1]-self.tabel[2])]
+            else:
+                player.tabel=[0,-(self.tabel[1]-player.tabel[2])]
+            i+=1
+        if(player.tabel[0]<=0 or (i>=len(self.__riddle) and self.tabel[0]>0)):
+            print("game over")
+            return False
+        if(self.tabel[0]<=0):
+            player.tabel=[0,10]
+            player.tabel = [1, 10]
+            player.tabel = [2, 10]
+            return True
+
+
+
+
+
+
+class Map:
+    def __init__(self, mapObject):
+        self.__mapObject = mapObject
+        self.decorations=[]
+
+    def integrate(self, scene, x, y):
+        for pointY in range(len(self.__mapObject)):
+            for pointX in range(len(self.__mapObject[pointY])):
+                point=self.__mapObject[pointY][pointX]
+                if(not point==0):
+                    block=Decoration(pointX+x,pointY+y,point)
+                    scene.addObject(block)
+                    self.decorations.append(block)
+
+
+
+camera=Camera(0,0)
+
+
+scene=Scene(camera,10,10)
+scene.initMap()
+
+player=Player(3,3,"п")
+scene.addObject(player)
+
+cold=Cold(16,8,"з")
+scene.addObject(cold)
+
+nps=[]
+
+nps1=NPC(3,2,"спіралеподібний","c",30,12,0,[["x^2-4=0;x1>0;x1=","2"],
+                                                                             ["lim(x^2*5)=;x->0","0"],
+                                                                             ["cos(0)=","1"],
+                                                                             ["sin(pi/2)","1"],
+                                                                             ["x/5=0","0"]],[[".",".",".","#",".",".",".","\n"],
+                                                                                              [".",".","#","#","#",".",".","\n"],
+                                                                                              [".","#","#","#","#","#",".","\n"],
+                                                                                              [".","V","V","V","V","V",".","\n"],
+                                                                                              [".","V","@","V","@","V",".","\n"],
+                                                                                              [".","V","V","V","V","V",".","\n"],
+                                                                                              [".","V","P","P","P","V",".","\n"],
+                                                                                              [".",".","V","V","V",".",".","\n"]])
+nps2=NPC(3,-8,"сфінкс","^",50,25,5,[["(x^5)'=","5x^4"],
+                                                                             ["тіло рухається за законом s(t)=5t знайдіть закон швидкості","5"],
+                                                                             ["x^2-5x+6=0 в відповідь запишіть суму коренів","5"],
+                                                                             ["2^4x-5*2^2x+6 в відповідь запишіть раціональний корінь в вигляді десяткового дробу через кому","0.5"],
+                                                                             ["sin(pi)","0"]],[[".","^","@","#","#","#","#","@","^","."]])
+scene.addObject(nps1)
+nps.append(nps1)
+scene.addObject(nps2)
+nps.append(nps2)
+
+startMap=Map([["#","#","#","x","x","x","x","#","#","#"],
+              ["#",0,0,0,0,0,0,0,0,"#"],
+              ["#",0,0,0,0,0,0,0,0,"#"],
+              ["#",0,0,0,0,0,0,0,0,"x"],
+              ["#",0,0,"#","#","#","#",0,0,"x"],
+              ["#", 0,0, "#", "#", "#", "#", 0, 0, "y"],
+              ["#", 0, 0, 0, 0, 0, 0, 0, 0, "Q"],
+              ["#",0,0,0,0,0,0,0,0,"#"],
+              ["#",0,0,0,0,0,0,0,0,"#"],
+              ["#","#","#","x",0,0,0,0,"x","x","#","#","#"],
+              ["#","#","#",0,0,0,0,"#","#","#","#","#","#","x","d","d","d","#","#","#"],
+              ["#",0,0,0,0,0,0,0,0,"#","#",0,0,0,0,0,0,0,0,"#"],
+              ["#",0,0,0,0,0,0,0,0,"#","#",0,0,0,0,0,0,0,0,"#"],
+              ["#",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,"d"],
+              ["#",0,0,"#","#","#","#",0,0,0,0,0,0,"#","#","#","#",0,0,0,"#"],
+              ["#", 0,0, "#", "#", "#", "#", 0, 0, 0,0, 0,0, "#", "#", "#", "#", 0, 0, 0,"#"],
+              ["#", 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0,"#"],
+              ["#",0,0,0,0,0,0,0,0,"#","#",0,0,0,0,0,0,0,0,"#"],
+              ["#",0,0,0,0,0,0,0,0,"#","#",0,0,0,0,0,0,0,0,"#"],
+              ["#","#","#","x","#","x","x","#","#","#","#","#","#","x","#","x","x","#","#","#"]
+])
+
+startMap.integrate(scene,0,-10)
 
 controler=""
 
@@ -21,38 +257,38 @@ print("w-move top")
 print("s-move down")
 print("a-move left")
 print("d-move right")
-print("п-пірат")
+print("і-інформація про персонажа")
+print("п-{name}".format(name=player.name))
+print("розшифруйте текст")
 print("9-9(18)(15)(18)(22)(18)")
 print("9(17)0(13)(22)(10) 9(18)(15)(18)(22)(18)")
 print("алфавіт масив")
 print("пароль від сундука з золотом-(19)(20)(15)")
+print("щоб забрати 9 вам потрібно відповісти на питання охоронців c and ^")
+level=0
 while not controler=="e":
-    canvas=createCanvas(10,10)
+    player.move(controler)
 
-    pushObjectToCanvas(canvas,coldX,coldY,"з")
-    pushObjectToCanvas(canvas, playerX, playerY, "п")
+    camera.x=player.x-5
+    camera.y=player.y-5
 
-    drawCanvas(canvas)
+    for block in startMap.decorations:
+        block.colision(player)
+    if(level==2):
+        controler = cold.colision(player)
+    for i in range(len(nps)):
+        if(nps[i]):
+            isGameOver=nps[i].colision(player)
+            controler="e" if not isGameOver and not isGameOver==None else ""
+            if(not controler and not isGameOver==None):
+                scene.removeObject(nps[i])
+                nps[i]=None
+                level+=1
 
+    scene.renderMap()
 
     print("if you want exit you need write e")
-    controler=input("controler:").lower()
+    if(not controler=="e"):
+        controler=input("controler:").lower()
 
-    if (controler == "w"):
-        playerY -= 1
-    elif (controler == "s"):
-        playerY += 1
-    elif (controler == "a"):
-        playerX -= 1
-    elif (controler == "d"):
-        playerX += 1
-
-    if (coldX == playerX and coldY == playerY):
-        print("end game")
-        controler = input("пароль від сундука з золотом:").lower()
-        if(controler=="прл"):
-            print("Winner")
-        else:
-            print("Game Over")
-        controler="e"
 
