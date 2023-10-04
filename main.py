@@ -1,5 +1,17 @@
 
+class Parametr:
+    def __init__(self,value):
+        self.__value=value
 
+    def get(self):
+        return self.__value
+
+    def set(self,value):
+        self.__value=value
+
+class ParametrAcamulate(Parametr):
+    def set(self,value):
+        super().set(value+self.get())
 
 class Camera:
     def __init__(self,x:float,y:float):
@@ -59,37 +71,21 @@ class InteractiveObject(ObjectGame):
     def __init__(self,x,y,name,element,live,atack,protect):
         super().__init__(x,y,element)
         self.__name=name
-        self.__live=live
-        self.__atack=atack
-        self.__protect=protect
+        self.live=ParametrAcamulate(live)
+        self.atack=ParametrAcamulate(atack)
+        self.protect=ParametrAcamulate(protect)
 
     def printInfo(self):
+        live=self.live.get()
+        protect=self.protect.get()
+        atack=self.atack.get()
         print(f"імя {self.name}")
-        print(f"кількість життя {self.__live}")
-        print(f"захист {self.__protect}")
-        print(f"напад {self.__atack}")
+        print(f"кількість життя {live}")
+        print(f"захист {protect}")
+        print(f"напад {atack}")
     @property
     def name(self):
         return self.__name
-    @property
-    def table(self):
-        return [
-            self.__live,
-            self.__atack,
-            self.__protect
-        ]
-
-    @table.setter
-    def tabel(self, indexAndAcamulate):
-        characteristics = [
-            self.__live,
-            self.__atack,
-            self.__protect
-        ]
-        characteristics[indexAndAcamulate[0]] += indexAndAcamulate[1]
-        self.__live = characteristics[0]
-        self.__atack = characteristics[1]
-        self.__protect = characteristics[2]
 
 
 class Player(InteractiveObject):
@@ -150,24 +146,24 @@ class NPC(InteractiveObject):
 
     def battle(self,player):
         i=0
-        while player.tabel[0]>0 and self.tabel[0]>0 and i<len(self.__riddle):
+        while player.live.get()>0 and self.live.get()>0 and i<len(self.__riddle):
             for lineModel in self.__model:
                 print("".join(lineModel))
-            print("{name} життя {live}.................{nameNPC} життя {liveNPC}".format(name=player.name,live=player.tabel[0],nameNPC=self.name,liveNPC=self.tabel[0]))
+            print("{name} життя {live}.................{nameNPC} життя {liveNPC}".format(name=player.name,live=player.live.get(),nameNPC=self.name,liveNPC=self.live.get()))
             print("загадка:\n"+self.__riddle[i][0])
             result=input("відповідь на загадку:")
             if(result==self.__riddle[i][1]):
-                self.tabel=[0,-(player.tabel[1]-self.tabel[2])]
+                self.live.set(-(player.atack.get()-self.protect.get()))
             else:
-                player.tabel=[0,-(self.tabel[1]-player.tabel[2])]
+                player.live.set(-(self.atack.get()-player.protect.get()))
             i+=1
-        if(player.tabel[0]<=0 or (i>=len(self.__riddle) and self.tabel[0]>0)):
+        if(player.live.get()<=0 or (i>=len(self.__riddle) and self.live.get()>0)):
             print("game over")
             return False
-        if(self.tabel[0]<=0):
-            player.tabel=[0,10]
-            player.tabel = [1, 10]
-            player.tabel = [2, 10]
+        if(self.live.get()<=0):
+            player.live.set(10)
+            player.atack.set(10)
+            player.protect.set(10)
             return True
 
 
