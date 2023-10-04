@@ -151,7 +151,7 @@ class NPC(InteractiveObject):
                 print("".join(lineModel))
             print("{name} життя {live}.................{nameNPC} життя {liveNPC}".format(name=player.name,live=player.live.get(),nameNPC=self.name,liveNPC=self.live.get()))
             print("загадка:\n"+self.__riddle[i][0])
-            result=input("відповідь на загадку:")
+            result=input("відповідь на загадку:").lower()
             if(result==self.__riddle[i][1]):
                 self.live.set(-(player.atack.get()-self.protect.get()))
             else:
@@ -165,9 +165,6 @@ class NPC(InteractiveObject):
             player.atack.set(10)
             player.protect.set(10)
             return True
-
-
-
 
 
 
@@ -274,9 +271,9 @@ while not controler=="e":
         controler = cold.colision(player)
     for i in range(len(nps)):
         if(nps[i]):
-            isGameOver=nps[i].colision(player)
-            controler="e" if not isGameOver and not isGameOver==None else ""
-            if(not controler and not isGameOver==None):
+            isNotGameOver=nps[i].colision(player)
+            controler="e" if not isNotGameOver and not isNotGameOver==None else ""
+            if(not controler and not isNotGameOver==None):
                 scene.removeObject(nps[i])
                 nps[i]=None
                 level+=1
