@@ -217,7 +217,7 @@ class Map:
 camera=Camera(0,0)
 
 
-scene=Scene(camera,10,10)
+scene=Scene(camera,20,10)
 scene.initMap()
 
 player=Player(3,3,"п")
