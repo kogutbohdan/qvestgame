@@ -1,4 +1,12 @@
+def removeElementInArray(array,elem):
+    key = 0
+    for i in range(len(array)):
+        if (array[i] == elem):
+            key = i
+            break
 
+    array[key], array[-1] = array[-1], array[key]
+    return array.pop()
 class Parametr:
     def __init__(self,value):
         self.__value=value
@@ -12,6 +20,30 @@ class Parametr:
 class ParametrAcamulate(Parametr):
     def set(self,value):
         super().set(value+self.get())
+
+class Controller:
+    def __init__(self,value:str):
+        self.value:str=value
+
+class NPCColection:
+    def __init__(self,scene):
+        self.__nps=[]
+        self.__scene=scene
+
+
+    def add(self,nps):
+        self.__nps.append(nps)
+        self.__scene.addObject(nps)
+
+    def remove(self,nps):
+        removeElementInArray(self.__nps,nps)
+        self.__scene.removeObject(nps)
+
+    def colision(self,player,controler,preveLevel):
+        for nps in self.__nps:
+            nps.colision(player,controler)
+            if(not controler.value=="e" and not player.level.get()==preveLevel):
+                self.remove(nps)
 
 class Camera:
     def __init__(self,x:float,y:float):
@@ -33,14 +65,7 @@ class Scene:
         self.__gameObjects.append(object)
 
     def removeObject(self,object):
-        keyObject=None
-        for i in range(len(self.__gameObjects)):
-            if(self.__gameObjects[i]==object):
-                keyObject=i
-                break
-
-        self.__gameObjects[keyObject],self.__gameObjects[-1]=self.__gameObjects[-1],self.__gameObjects[keyObject]
-        self.__gameObjects.pop()
+        removeElementInArray(self.__gameObjects,object)
 
     def __drawObject(self,x,y,element):
         x=x-self.__camera.x
@@ -91,6 +116,7 @@ class InteractiveObject(ObjectGame):
 class Player(InteractiveObject):
     def __init__(self,x:float,y:float,element:str):
         super().__init__(x,y,input("імя гравця"),element,10,10,10)
+        self.level=ParametrAcamulate(0)
 
 
     def move(self,controler):
@@ -115,16 +141,15 @@ class Player(InteractiveObject):
             "y":self.__preveY
         }
 class Cold(ObjectGame):
-    def colision(self,player):
-        if (self.x == player.x and self.y == player.y):
+    def colision(self,player,controler):
+        if (self.x == player.x and self.y == player.y and player.level.get()>=2):
             print("end game")
-            controler = input("пароль від сундука з золотом:").lower()
-            if (controler == "прл"):
+            controlerPassword = input("пароль від сундука з золотом:").lower()
+            if (controlerPassword == "прл"):
                 print("Winner")
             else:
                 print("Game Over")
-            return "e"
-        return ""
+            controler.value="e"
 
 class Decoration(ObjectGame):
     def colision(self,player):
@@ -139,12 +164,12 @@ class NPC(InteractiveObject):
         self.__riddle=riddle
         self.__model=model
 
-    def colision(self,player):
+    def colision(self,player,controler):
         if(self.x==player.x and self.y==player.y):
-            return self.battle(player)
+            return self.battle(player,controler)
         return None
 
-    def battle(self,player):
+    def battle(self,player,controler):
         i=0
         while player.live.get()>0 and self.live.get()>0 and i<len(self.__riddle):
             for lineModel in self.__model:
@@ -159,20 +184,25 @@ class NPC(InteractiveObject):
             i+=1
         if(player.live.get()<=0 or (i>=len(self.__riddle) and self.live.get()>0)):
             print("game over")
-            return False
+            controler.value="e"
         if(self.live.get()<=0):
+            print("ви перемогли охоронця")
             player.live.set(10)
             player.atack.set(10)
             player.protect.set(10)
-            return True
+            player.level.set(1)
+
 
 
 
 class Map:
     def __init__(self, mapObject):
         self.__mapObject = mapObject
-        self.decorations=[]
+        self.__decorations=[]
 
+    def colision(self,player):
+        for block in self.__decorations:
+            block.colision(player)
     def integrate(self, scene, x, y):
         for pointY in range(len(self.__mapObject)):
             for pointX in range(len(self.__mapObject[pointY])):
@@ -180,7 +210,7 @@ class Map:
                 if(not point==0):
                     block=Decoration(pointX+x,pointY+y,point)
                     scene.addObject(block)
-                    self.decorations.append(block)
+                    self.__decorations.append(block)
 
 
 
@@ -196,7 +226,7 @@ scene.addObject(player)
 cold=Cold(16,8,"з")
 scene.addObject(cold)
 
-nps=[]
+nps=NPCColection(scene)
 
 nps1=NPC(3,2,"спіралеподібний","c",30,12,0,[["x^2-4=0;x1>0;x1=","2"],
                                                                              ["lim(x^2*5)=;x->0","0"],
@@ -213,12 +243,10 @@ nps1=NPC(3,2,"спіралеподібний","c",30,12,0,[["x^2-4=0;x1>0;x1=","
 nps2=NPC(3,-8,"сфінкс","^",50,25,5,[["(x^5)'=","5x^4"],
                                                                              ["тіло рухається за законом s(t)=5t знайдіть закон швидкості","5"],
                                                                              ["x^2-5x+6=0 в відповідь запишіть суму коренів","5"],
-                                                                             ["2^4x-5*2^2x+6 в відповідь запишіть раціональний корінь в вигляді десяткового дробу через кому","0.5"],
+                                                                             ["2^4x-5*2^2x+6=0 в відповідь запишіть раціональний корінь в вигляді десяткового дробу через кому","0.5"],
                                                                              ["sin(pi)","0"]],[[".","^","@","#","#","#","#","@","^","."]])
-scene.addObject(nps1)
-nps.append(nps1)
-scene.addObject(nps2)
-nps.append(nps2)
+nps.add(nps1)
+nps.add(nps2)
 
 startMap=Map([["#","#","#","x","x","x","x","#","#","#"],
               ["#",0,0,0,0,0,0,0,0,"#"],
@@ -244,7 +272,7 @@ startMap=Map([["#","#","#","x","x","x","x","#","#","#"],
 
 startMap.integrate(scene,0,-10)
 
-controler=""
+controler=Controller("")
 
 print("w-move top")
 print("s-move down")
@@ -258,30 +286,23 @@ print("9(17)0(13)(22)(10) 9(18)(15)(18)(22)(18)")
 print("алфавіт масив")
 print("пароль від сундука з золотом-(19)(20)(15)")
 print("щоб забрати 9 вам потрібно відповісти на питання охоронців c and ^")
-level=0
-while not controler=="e":
-    player.move(controler)
+
+while not controler.value=="e":
+    player.move(controler.value)
 
     camera.x=player.x-5
     camera.y=player.y-5
 
-    for block in startMap.decorations:
-        block.colision(player)
-    if(level==2):
-        controler = cold.colision(player)
-    for i in range(len(nps)):
-        if(nps[i]):
-            isNotGameOver=nps[i].colision(player)
-            controler="e" if not isNotGameOver and not isNotGameOver==None else ""
-            if(not controler and not isNotGameOver==None):
-                scene.removeObject(nps[i])
-                nps[i]=None
-                level+=1
+    startMap.colision(player)
+
+    cold.colision(player,controler)
+    nps.colision(player,controler,player.level.get())
+
 
     scene.renderMap()
 
     print("if you want exit you need write e")
-    if(not controler=="e"):
-        controler=input("controler:").lower()
+    if(not controler.value=="e"):
+        controler.value=input("controler:").lower()
 
 
